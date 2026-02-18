@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # Base de datos PostgreSQL
+  # NOTA: En producción VPS, usa tu base de datos PostgreSQL existente
+  # No levantes este servicio si ya tienes PostgreSQL corriendo en el host
+  # Comenta todo este bloque "db" si usas la DB del VPS directamente
+  db:
+    image: postgres:15-alpine
+    container_name: helpdesk_aesa_db_prod
+    restart: always
+    environment:
+      # Estas son para el contenedor PostgreSQL interno (si lo usas)
+      # Si usas PostgreSQL del VPS, elimina este servicio completo
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    # No exponer puerto públicamente en producción
+    expose:
+      - "5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - helpdesk_network_prod
+
+  # ChromaDB para vectores
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: helpdesk_aesa_chromadb_prod
+    restart: always
+    volumes:
+      - chroma_data_prod:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - helpdesk_network_prod
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: helpdesk_aesa_backend_prod
+    restart: always
+    # Si NO usas el servicio "db" de arriba (usas PostgreSQL del VPS), comenta estas líneas:
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    #   chromadb:
+    #     condition: service_healthy
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    environment:
+      # Database - IMPORTANTE: Configura esto en las variables de entorno de Plesk
+      # Para VPS: postgresql://admin_agenteaesa:zG4c0nxSHez%!fr4@localhost:5432/admin_aesa
+      # O usa ${DATABASE_URL} si lo defines en Plesk
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # OpenAI API
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      
+      # Security
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      
+      # CORS (añadir tu dominio real)
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      
+      # ChromaDB
+      CHROMA_HOST: chromadb
+      CHROMA_PORT: 8000
+      CHROMA_PERSIST_DIRECTORY: /app/chroma_data
+      
+      # Application
+      ENVIRONMENT: production
+      DEBUG: False
+      PROJECT_NAME: Helpdesk AESA A2
+      
+      # Rate Limiting
+      RATE_LIMIT_PER_MINUTE: 60
+    volumes:
+      # En producción NO montamos el código, solo los PDFs
+      - ./docs:/app/docs:ro
+      - backend_chroma_prod:/app/chroma_data
+    ports:
+      - "8000:8000"
+    networks:
+      - helpdesk_network_prod
+    # Sin --reload en producción, con múltiples workers
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+
+  # Frontend React
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile.prod
+  #   container_name: helpdesk_aesa_frontend_prod
+  #   restart: always
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     - VITE_API_URL=${API_URL}
+  #   ports:
+  #     - "80:80"
+  #   networks:
+  #     - helpdesk_network_prod
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  chroma_data_prod:
+    driver: local
+  backend_chroma_prod:
+    driver: local
+
+networks:
+  helpdesk_network_prod:
+    driver: bridge

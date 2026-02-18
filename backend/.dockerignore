@@ -1,0 +1,57 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (ya están en docs/)
+README.md
+
+# Logs
+*.log
+logs/
+
+# Database local
+*.db
+*.sqlite
+*.sqlite3
+
+# ChromaDB local (se creará en el contenedor)
+chroma_data/
+
+# Node modules si hay frontend en misma carpeta
+node_modules/
