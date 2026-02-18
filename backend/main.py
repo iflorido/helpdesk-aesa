@@ -81,10 +81,14 @@ async def health_check():
     }
 
 
-# Aquí incluiremos los routers cuando los creemos:
-# from backend.api import chat, tickets
-# app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
-# app.include_router(tickets.router, prefix="/api/tickets", tags=["tickets"])
+# Incluir routers
+from api.auth import router as auth_router
+from api.tickets import router as tickets_router
+from api.chat import router as chat_router
+
+app.include_router(auth_router, prefix="/api/auth", tags=["authentication"])
+app.include_router(tickets_router, prefix="/api/tickets", tags=["tickets"])
+app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
 
 
 # Manejador global de excepciones

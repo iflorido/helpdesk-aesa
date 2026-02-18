@@ -3,8 +3,16 @@ Configuración centralizada de la aplicación usando Pydantic Settings.
 Lee variables de entorno desde .env automáticamente.
 """
 from typing import List
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+
+# Calcular la ruta al .env en la raíz del proyecto
+# backend/core/config.py -> backend/core -> backend -> raíz
+_current_file = Path(__file__)  # backend/core/config.py
+_backend_dir = _current_file.parent.parent  # backend/
+_root_dir = _backend_dir.parent  # raíz del proyecto
+_env_file = _root_dir / ".env"
 
 
 class Settings(BaseSettings):
@@ -78,7 +86,7 @@ class Settings(BaseSettings):
     
     # Configuración de Pydantic Settings
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_env_file),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"
