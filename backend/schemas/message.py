@@ -26,7 +26,7 @@ class MessageInDB(MessageBase):
     id: UUID
     ticket_id: UUID
     role: MessageRole
-    metadata: Optional[dict] = None
+    meta_data: Optional[dict] = None  # Campo real en la BD
     created_at: datetime
     updated_at: datetime
 

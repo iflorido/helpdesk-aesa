@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --aesa-blue: #1B95C8;
+  --aesa-blue-dark: #0F4F73;
+  --aesa-blue-light: #4FB3DB;
+  --neutral-white: #FFFFFF;
+  --neutral-light: #F5F7F8;
+  --neutral-cream: #F1EFEA;
+  --text-primary: #1F2933;
+  --text-secondary: #6B7280;
+}
+
+@layer base {
+  * {
+    @apply transition-all duration-aesa ease-in-out;
+  }
+
+  body {
+    @apply bg-neutral-light text-neutral-text-primary font-sans antialiased;
+  }
+
+  /* Scrollbar personalizado estilo macOS */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-neutral-light;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-neutral-text-secondary/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-neutral-text-secondary/50;
+  }
+}
+
+@layer components {
+  /* Glass morphism effect */
+  .glass {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-blue {
+    background: rgba(27, 149, 200, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Gradiente corporativo */
+  .gradient-aesa {
+    background: linear-gradient(135deg, #1B95C8 0%, #0F4F73 100%);
+  }
+
+  /* Fondo premium */
+  .gradient-premium {
+    background: linear-gradient(180deg, #FFFFFF 0%, #F1EFEA 100%);
+  }
+
+  /* Card con borde superior azul */
+  .card-aesa {
+    @apply bg-white/70 backdrop-blur-aesa rounded-aesa-lg border-t-2 border-aesa-blue/40 shadow-glass;
+  }
+
+  /* Botón primario AESA */
+  .btn-primary {
+    @apply bg-aesa-blue text-white px-6 py-3 rounded-aesa font-medium shadow-aesa hover:bg-aesa-blue-dark active:scale-95;
+  }
+
+  /* Botón secundario */
+  .btn-secondary {
+    @apply bg-white text-aesa-blue border-2 border-aesa-blue px-6 py-3 rounded-aesa font-medium hover:bg-aesa-blue/5 active:scale-95;
+  }
+
+  /* Input estilo Apple */
+  .input-aesa {
+    @apply w-full px-4 py-3 bg-neutral-light border border-neutral-text-secondary/20 rounded-aesa text-neutral-text-primary placeholder:text-neutral-text-secondary/60 focus:border-aesa-blue focus:ring-2 focus:ring-aesa-blue/20 focus:outline-none;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

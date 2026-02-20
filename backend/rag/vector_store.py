@@ -2,7 +2,6 @@
 Vector Store usando ChromaDB para almacenar embeddings de documentos.
 """
 import chromadb
-from chromadb.config import Settings
 from typing import List, Dict, Optional
 import logging
 
@@ -17,13 +16,10 @@ class VectorStore:
     def __init__(self):
         """Inicializa la conexión con ChromaDB."""
         try:
-            # Configuración de ChromaDB
-            chroma_settings = Settings(
-                persist_directory=settings.CHROMA_PERSIST_DIRECTORY,
-                anonymized_telemetry=False
+            # Usar PersistentClient para persistir en disco
+            self.client = chromadb.PersistentClient(
+                path=settings.CHROMA_PERSIST_DIRECTORY
             )
-            
-            self.client = chromadb.Client(chroma_settings)
             
             # Crear o obtener colección
             self.collection = self.client.get_or_create_collection(

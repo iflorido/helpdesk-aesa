@@ -60,9 +60,9 @@ class Settings(BaseSettings):
         description="Puerto de ChromaDB"
     )
     CHROMA_PERSIST_DIRECTORY: str = Field(
-        default="./chroma_data",
-        description="Directorio para persistir ChromaDB"
-    )
+       default=str(_backend_dir / "chroma_data"),  # <-- ESTO
+       description="Directorio para persistir ChromaDB"
+   )
     
     # Application
     ENVIRONMENT: str = Field(

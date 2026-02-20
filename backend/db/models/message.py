@@ -49,5 +49,5 @@ class Message(Base):
         return {
             "role": self.role.value,
             "content": self.content,
-            "meta_data": self.meta_data or {}
+            "metadata": self.meta_data or {}
         }

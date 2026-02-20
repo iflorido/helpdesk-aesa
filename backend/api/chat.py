@@ -22,14 +22,16 @@ async def send_message(
     db: Session = Depends(get_db)
 ):
     """
-    Envía un mensaje del usuario en un ticket.
+    Envía un mensaje del usuario en un ticket y recibe respuesta automática del agente.
     
     - **ticket_id**: ID del ticket
     - **content**: Contenido del mensaje
     
-    Por ahora solo crea el mensaje del usuario.
-    En el futuro, aquí se invocará al agente para generar la respuesta.
+    El agente buscará información en los PDFs de AESA y generará una respuesta automática.
     """
+    from agent import get_rag_agent
+    from db.models import TicketStatus
+    
     ticket_repo = TicketRepository(db)
     message_repo = MessageRepository(db)
     
@@ -56,15 +58,70 @@ async def send_message(
         )
     
     # Crear mensaje del usuario
-    message = message_repo.create_user_message(
+    user_message = message_repo.create_user_message(
         ticket_id=ticket_id,
         content=message_data.content
     )
     
-    # TODO: Aquí se invocará al agente para generar la respuesta automática
-    # Por ahora, solo devolvemos el mensaje del usuario
+    # Obtener historial de conversación
+    conversation_history = message_repo.get_conversation_history(ticket_id, limit=10)
     
-    return message
+    # Generar respuesta del agente
+    try:
+        agent = get_rag_agent()
+        
+        # Determinar tipo de documento según categoría del ticket
+        doc_type_map = {
+            "licensing": "pdf_aesa_a2",  # Por defecto A2
+            "technical": None  # Buscar en todos
+        }
+        doc_type = doc_type_map.get(ticket.category.value)
+        
+        # Generar respuesta
+        agent_response = agent.generate_response(
+            user_query=message_data.content,
+            conversation_history=conversation_history,
+            document_type=doc_type
+        )
+        
+        # Crear mensaje del asistente
+        assistant_message = message_repo.create_assistant_message(
+            ticket_id=ticket_id,
+            content=agent_response["content"],
+            metadata={
+                "sources": agent_response["sources"],
+                "tokens_used": agent_response["metadata"]["tokens_total"],
+                "model": agent_response["metadata"]["model"]
+            }
+        )
+        
+        # Verificar si debe escalarse
+        should_escalate, escalate_reason = agent.should_escalate(agent_response)
+        
+        if should_escalate:
+            # Marcar ticket como escalado
+            ticket_repo.escalate(ticket_id)
+            
+            # Crear mensaje del sistema
+            message_repo.create_system_message(
+                ticket_id=ticket_id,
+                content=f"🔔 Este ticket ha sido escalado a un operador humano. Razón: {escalate_reason}"
+            )
+        
+        # Retornar el mensaje del usuario (el del asistente se verá en el historial)
+        return user_message
+        
+    except Exception as e:
+        # Si falla el agente, crear mensaje de error
+        message_repo.create_system_message(
+            ticket_id=ticket_id,
+            content=f"⚠️ Error al generar respuesta automática: {str(e)}"
+        )
+        
+        # Escalar el ticket
+        ticket_repo.escalate(ticket_id)
+        
+        return user_message
 
 
 @router.get("/{ticket_id}/messages", response_model=ChatHistoryResponse)
@@ -83,7 +140,7 @@ async def get_chat_history(
     ticket_repo = TicketRepository(db)
     message_repo = MessageRepository(db)
     
-    # Verificar que el ticket existe y pertenece al usuario
+    # Verificar que el ticket existe
     ticket = ticket_repo.get_by_id(ticket_id)
     
     if not ticket:
@@ -92,7 +149,11 @@ async def get_chat_history(
             detail="Ticket no encontrado"
         )
     
-    if str(ticket.user_id) != user_id:
+    # Verificar permisos: el dueño del ticket O un admin puede ver el chat
+    from db.models import User
+    user = db.query(User).filter(User.id == user_id).first()
+    
+    if str(ticket.user_id) != user_id and (not user or not user.is_admin):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permiso para ver este chat"

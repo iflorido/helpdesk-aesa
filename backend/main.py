@@ -33,13 +33,22 @@ async def lifespan(app: FastAPI):
     logger.info(f"✅ Iniciando {settings.PROJECT_NAME}")
     logger.info(f"📍 Entorno: {settings.ENVIRONMENT}")
     logger.info(f"🔧 Debug: {settings.DEBUG}")
-    # Aquí inicializaremos la base de datos, ChromaDB, etc.
+    
+    # Verificar ChromaDB
+    try:
+        from rag import get_vector_store
+        vs = get_vector_store()
+        doc_count = vs.count()
+        logger.info(f"📚 ChromaDB: {doc_count} documentos indexados en {settings.CHROMA_PERSIST_DIRECTORY}")
+        if doc_count == 0:
+            logger.warning("⚠️  ChromaDB está vacío. Ejecuta: python -m rag.ingestor")
+    except Exception as e:
+        logger.error(f"❌ Error conectando a ChromaDB: {e}")
     
     yield
     
     # Shutdown
     logger.info(f"🛑 Cerrando {settings.PROJECT_NAME}")
-    # Aquí cerraremos conexiones, recursos, etc.
 
 
 # Crear aplicación FastAPI
@@ -85,10 +94,12 @@ async def health_check():
 from api.auth import router as auth_router
 from api.tickets import router as tickets_router
 from api.chat import router as chat_router
+from api.operator import router as operator_router
 
 app.include_router(auth_router, prefix="/api/auth", tags=["authentication"])
 app.include_router(tickets_router, prefix="/api/tickets", tags=["tickets"])
 app.include_router(chat_router, prefix="/api/chat", tags=["chat"])
+app.include_router(operator_router)  # Ya tiene prefix en el router
 
 
 # Manejador global de excepciones
